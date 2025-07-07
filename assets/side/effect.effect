@@ -1,0 +1,247 @@
+// Effect Syntax Guide: https://docs.cocos.com/creator/manual/zh/shader/index.html
+
+CCEffect %{
+  techniques:
+  - name: opaque
+    passes:
+    - vert: unlit-vs:vert
+      frag: unlit-fs:frag
+      properties: &props
+        mainTexture:    { value: white }
+        mainColor:      { value: [1, 1, 1, 1], editor: { type: color } }
+
+        sideOffset: { value: 0.01 }
+        sideWidth: { value: 0.01 }
+        sideColor: { value: [1,1,1,1], editor: { type: color } } 
+
+        sizeRatio: { value: 1 }
+        frontWidth: { value: 0.4, editor: { displayName: '开口宽度' } }
+
+  - name: transparent
+    passes:
+    - vert: unlit-vs:vert
+      frag: unlit-fs:frag
+      blendState:
+        targets:
+        - blend: true
+          blendSrc: src_alpha
+          blendDst: one_minus_src_alpha
+          blendSrcAlpha: src_alpha
+          blendDstAlpha: one_minus_src_alpha
+      properties: *props
+}%
+
+CCProgram unlit-vs %{
+  
+precision highp float;
+#include <legacy/input-standard>
+#include <builtin/uniforms/cc-global>
+#include <legacy/local-batch>
+#include <legacy/input-standard>
+#include <legacy/fog-vs>
+#include <legacy/shadow-map-vs>
+
+in vec4 a_color;
+#if HAS_SECOND_UV
+  in vec2 a_texCoord1;
+#endif
+
+out vec3 v_position;
+out vec3 v_normal;
+out vec3 v_tangent;
+out vec3 v_bitangent;
+out vec2 v_uv;
+out vec2 v_uv1;
+out vec4 v_color;
+
+out vec3 v_center;
+
+vec4 vert () {
+  StandardVertInput In;
+  CCVertInput(In);
+
+  mat4 matWorld, matWorldIT;
+  CCGetWorldMatrixFull(matWorld, matWorldIT);
+
+  vec4 pos = matWorld * In.position;
+
+  // v_position = pos.xyz;
+  v_position = In.position.xyz;
+
+  v_normal = normalize((matWorldIT * vec4(In.normal, 0.0)).xyz);
+  v_tangent = normalize((matWorld * vec4(In.tangent.xyz, 0.0)).xyz);
+  v_bitangent = cross(v_normal, v_tangent) * In.tangent.w; // note the cross order
+
+  v_center = vec3(matWorld[3][0], matWorld[3][1], matWorld[3][2]);
+
+
+  v_uv = a_texCoord;
+  #if HAS_SECOND_UV
+    v_uv1 = a_texCoord1;
+  #endif
+  v_color = a_color;
+
+  CC_TRANSFER_FOG(pos);
+  CC_TRANSFER_SHADOW(pos);
+
+  return cc_matProj * (cc_matView * matWorld) * In.position;
+}
+
+}%
+
+CCProgram unlit-fs %{
+  #pragma extension([GL_OES_standard_derivatives, __VERSION__ < 300])
+
+  precision highp float;
+  #include <legacy/output>
+  #include <legacy/fog-fs>
+
+  in vec2 v_uv;
+  in vec3 v_position;
+  
+  in vec3 v_center;
+
+  uniform sampler2D mainTexture;
+
+  uniform Constant {
+    vec4 mainColor;
+    vec4 sideColor;
+
+    float sideWidth;
+    float sideOffset;
+    float sizeRatio;
+    float frontWidth;
+  };
+
+  float roundedBoxSDF(vec2 position, vec2 halfSize, float cornerRadius) {
+   position = abs(position) - halfSize + cornerRadius;
+   return length(max(position, 0.0)) + min(max(position.x, position.y), 0.0) - cornerRadius;
+  }
+
+  // float roundedBoxSDF(vec2 CenterPosition, vec2 Size, vec4 Radius) {
+  //     Radius.xy = (CenterPosition.x > 0.0) ? Radius.xy : Radius.zw;
+  //     Radius.x  = (CenterPosition.y > 0.0) ? Radius.x  : Radius.y;
+      
+  //     vec2 q = abs(CenterPosition)-Size+Radius.x;
+  //     return min(max(q.x,q.y),0.0) + length(max(q,0.0)) - Radius.x;
+  // }
+
+  float distToLine(vec2 pt1, vec2 pt2, vec2 testPt)
+  {
+    vec2 lineDir = pt2 - pt1;
+    vec2 perpDir = vec2(lineDir.y, -lineDir.x);
+    vec2 dirToPt1 = pt1 - testPt;
+    return abs(dot(normalize(perpDir), dirToPt1));
+  }
+
+  float drawLine1(vec2 p, vec2 p1, vec2 p2, float r)
+  {
+      vec2 l = p2 - p1;
+      float L = length(l);
+      float L2 = L*L;
+      
+      float d1 = length(p - p1);
+      float d2 = length(p - p2);
+      float d  = min(d1, d2);
+      float ds = dot(p - p1, l);
+      if (ds >= 0.0 && ds <= L2)
+      {
+          vec2 n = vec2(-l.y, l.x) / L;
+          d = min(d, abs(dot(p - p1, n)));
+      }
+      
+      // blurry
+      //return 1.0 - smoothstep(0.0, 0.5, d - r);
+      
+      // antialiased
+      return 1.0 - smoothstep(0.0, 0.01, d - r);
+      
+      // binary
+      if (d <= r) return 1.0;
+      else return 0.0;
+  }
+
+
+  float drawLine2 (in vec2 p, in vec2 a, in vec2 b, in float r) {
+    vec2 dir = normalize(b-a);
+    a += dir * r;
+    b -= dir * r;
+    
+    p -= a;
+    b -= a;
+    float d = length (p - b * clamp (dot (p, b) / dot (b, b), 0.0, 1.0));
+    return smoothstep (r + 0.01, r, d); // antialiased
+  //	return step (d, r); // binary
+  }
+
+  float blendLine(float line1, float line2) {
+    // if (line1 > 0. && line2 > 0.) {
+    //   return min(line1, line2);
+    // }
+
+    return max(line1, line2);
+  }
+
+  vec4 frag () {
+
+
+    float dist = 0.;
+    
+    // // 
+    // dist = length(v_uv);
+
+    // dist = min(dist, length(v_uv - vec2(0., 1.)));
+    // dist = min(dist, length(v_uv - vec2(1., 0.)));
+    // dist = min(dist, length(v_uv - vec2(1.)));
+
+
+    // dist = distToLine(vec2(1., 0.), vec2(1., 1.), v_uv) * sizeRatio;
+    // dist = min(dist, distToLine(vec2(0., 1.), vec2(1., 1.), v_uv));
+    // dist = min(dist, distToLine(vec2(0., 0.), vec2(1., 0.), v_uv));
+    // dist = min(dist, distToLine(vec2(0., 0.), vec2(0., 1.), v_uv) * sizeRatio);
+
+    // dist = 1. - (dist * sideIntensity);
+    // dist = dist * 100.;
+
+    // if (v_uv.y < 0.5 && dist > 0.) {
+    //   dist *= step(frontWidth - abs(v_uv.x - 0.5), 0.);
+    // }
+
+    // dist = max(0., dist);
+
+    // 
+    float testWidth = sideWidth;
+    float offset = (testWidth + sideOffset);
+    dist = 0.;
+    // top
+    dist += drawLine1(v_uv, vec2(offset, offset), vec2(offset + frontWidth, offset), testWidth);
+    dist += drawLine1(v_uv, vec2(1. - offset - frontWidth, offset), vec2(1. - offset, offset), testWidth);
+    // bottom
+    dist = blendLine(dist, drawLine1(v_uv, vec2(offset, 1. - offset), vec2(1. - offset, 1. - offset), testWidth));
+
+    // x 
+    testWidth /= sizeRatio;
+    offset = (testWidth + sideOffset);
+    // left
+    dist = blendLine(dist, drawLine1(v_uv, vec2(offset, offset), vec2(offset, 1. - offset), testWidth));
+    // right
+    dist = blendLine(dist, drawLine1(v_uv, vec2(1. - offset, offset), vec2(1. - offset, 1. - offset), testWidth));
+    // dist = min(dist, 1.);
+    // dist = 1. - step(dist, 0.);
+
+
+    // sdf rect
+    // dist = roundedBoxSDF(v_uv - vec2(0.5), vec2(0.4), 0.1);
+    // dist = dist * 10.;
+    // return vec4(dist);
+
+    // return vec4(dist * 10.);
+
+    vec4 color = mainColor;
+    color *= texture(mainTexture, v_uv);
+
+    color = mix(color, sideColor, dist);
+
+    return color;
+  }
+}%
