@@ -1,0 +1,193 @@
+
+#if __VERSION__ >= 110
+
+    #include <legacy/input>
+    #include <builtin/uniforms/cc-global>
+    #include <legacy/decode-base>
+    #include <legacy/local-batch>
+    #include <legacy/input>
+
+    struct SplatSource {
+        uint order;
+        uint id;
+        ivec2 uv;
+        vec2 cornerUV;
+    };
+    struct SplatCenter {
+        vec3 view;
+        vec4 proj;
+        mat4 modelView;
+        float projMat00;
+    };
+    struct SplatCorner {
+        vec2 offset;
+        vec2 uv;
+        vec2 v;
+        float dlen;
+    };
+
+    uniform GsplatBlock {
+        vec4 camera_params;
+        // vec2 viewport;
+        // uint numSplats;
+        int numSplats;
+    };
+
+    uniform highp usampler2D splatOrder;
+    uniform highp usampler2D transformA;
+    uniform highp sampler2D transformB;
+
+
+    bool initSource(out SplatSource source) {
+        vec3 vertex_position = a_position;
+        
+        #if __VERSION__ >= 300
+            uint vertex_id_attrib = uint(gl_VertexID);
+        #else
+            uint vertex_id_attrib = uint(a_texCoord.x);
+        #endif
+
+        uint w = uint(textureSize(splatOrder, 0).x);
+        source.order = vertex_id_attrib + uint(vertex_position.z);
+        if (source.order >= uint(numSplats)) {
+            return false;
+        }
+        ivec2 orderUV = ivec2(source.order % w, source.order / w);
+        source.id = texelFetch(splatOrder, orderUV, 0).r;
+        source.uv = ivec2(source.id % w, source.id / w);
+        source.cornerUV = vertex_position.xy;
+        return true;
+    }
+
+    uint tAw;
+    vec3 readCenter(SplatSource source) {
+        uvec4 tA = texelFetch(transformA, source.uv, 0);
+        tAw = tA.w;
+        return uintBitsToFloat(tA.xyz);
+    }
+
+    mat3 quatToMat3(vec4 R) {
+        vec4 R2 = R + R;
+        float X = R2.x * R.w;
+        vec4 Y = R2.y * R;
+        vec4 Z = R2.z * R;
+        float W = R2.w * R.w;
+        return mat3(
+        1.0 - Z.z - W, Y.z + X, Y.w - Z.x, Y.z - X, 1.0 - Y.y - W, Z.w + Y.x, Y.w + Z.x, Z.w - Y.x, 1.0 - Y.y - Z.z
+        );
+    }
+
+    // uniform mat4 matrix_model;
+    // uniform mat4 matrix_view;
+    // uniform mat4 matrix_projection;
+    bool initCenter(vec3 modelCenter, out SplatCenter center) {
+        mat4 modelView = cc_matView * cc_matWorld;
+        vec4 centerView = modelView * vec4(modelCenter, 1.0);
+        if (centerView.z > 0.0) {
+            return false;
+        }
+        vec4 centerProj = cc_matProj * centerView;
+        centerProj.z = clamp(centerProj.z, -abs(centerProj.w), abs(centerProj.w));
+        center.view = centerView.xyz / centerView.w;
+        center.proj = centerProj;
+        center.projMat00 = cc_matProj[0][0];
+        center.modelView = modelView;
+        return true;
+    }
+
+    vec4 unpackRotation(vec3 packed) {
+        return vec4(packed.xyz, sqrt(max(0.0, 1.0 - dot(packed, packed))));
+    }
+    void readCovariance(in SplatSource source, out vec3 covA, out vec3 covB) {
+        vec4 tB = texelFetch(transformB, source.uv, 0);
+        mat3 rot = quatToMat3(unpackRotation(vec3(unpackHalf2x16(tAw), tB.w)).wxyz);
+        vec3 scale = tB.xyz;
+        mat3 M = transpose(mat3(
+        scale.x * rot[0], scale.y * rot[1], scale.z * rot[2]
+        ));
+        covA = vec3(dot(M[0], M[0]), dot(M[0], M[1]), dot(M[0], M[2]));
+        covB = vec3(dot(M[1], M[1]), dot(M[1], M[2]), dot(M[2], M[2]));
+    }
+
+    bool initCorner(SplatSource source, SplatCenter center, out SplatCorner corner) {
+        vec3 covA, covB;
+        readCovariance(source, covA, covB);
+        mat3 Vrk = mat3(
+            covA.x, covA.y, covA.z, covA.y, covB.x, covB.y, covA.z, covB.y, covB.z
+        );
+        float focal = cc_screenSize.x * center.projMat00;
+        vec3 v = camera_params.w == 1.0 ? vec3(0.0, 0.0, 1.0) : center.view.xyz;
+        float J1 = focal / v.z;
+        vec2 J2 = -J1 / v.z * v.xy;
+        mat3 J = mat3(
+            J1, 0.0, J2.x, 0.0, J1, J2.y, 0.0, 0.0, 0.0
+        );
+        mat3 W = transpose(mat3(center.modelView));
+        mat3 T = W * J;
+        mat3 cov = transpose(T) * Vrk * T;
+        float diagonal1 = cov[0][0] + 0.3;
+        float offDiagonal = cov[0][1];
+        float diagonal2 = cov[1][1] + 0.3;
+        float mid = 0.5 * (diagonal1 + diagonal2);
+        float radius = length(vec2((diagonal1 - diagonal2) / 2.0, offDiagonal));
+        float lambda1 = mid + radius;
+        float lambda2 = max(mid - radius, 0.1);
+        float vmin = min(1024.0, min(cc_screenSize.x, cc_screenSize.y));
+        float l1 = 2.0 * min(sqrt(2.0 * lambda1), vmin);
+        float l2 = 2.0 * min(sqrt(2.0 * lambda2), vmin);
+        if (l1 < 2.0 && l2 < 2.0) {
+            return false;
+        }
+        vec2 c = center.proj.ww / cc_screenSize.xy;
+        if (any(greaterThan(abs(center.proj.xy) - vec2(max(l1, l2)) * c, center.proj.ww))) {
+            return false;
+        }
+        vec2 diagonalVector = normalize(vec2(offDiagonal, lambda1 - diagonal1));
+        vec2 v1 = l1 * diagonalVector;
+        vec2 v2 = l2 * vec2(diagonalVector.y, -diagonalVector.x);
+        corner.offset = (source.cornerUV.x * v1 + source.cornerUV.y * v2) * c;
+        corner.uv = source.cornerUV;
+        return true;
+    }
+
+    // out float testaa;
+
+    mediump vec4 discardVec = vec4(0.0, 0.0, 2.0, 1.0);
+    vec4 gsplat_vert() {
+
+        SplatSource source;
+        SplatCenter center;
+        SplatCorner corner;
+
+        if (!initSource(source)) {
+            return discardVec;
+        }
+
+
+        vec3 modelCenter = readCenter(source);
+        if (!initCenter(modelCenter, center)) {
+            return discardVec;
+        }
+
+        if (!initCorner(source, center, corner)) {
+            return discardVec;
+        }
+
+        vec4 clr = vec4(1.);
+        return center.proj + vec4(corner.offset, 0, 0);
+
+        
+        // vec4 position;
+        // CCVertInput(position);
+
+        // mat4 matWorld;
+        // CCGetWorldMatrix(matWorld);
+
+        // testaa = a_texCoord.x;
+
+
+        // return cc_matProj * (cc_matView * matWorld) * position;
+    }
+
+
+#endif

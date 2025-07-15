@@ -59,29 +59,38 @@ class GSplatResourceBase {
 
 
         // build the instance mesh
-        const meshPositions = new Float32Array(12 * splatInstanceSize);
-        const meshIndices = new Uint32Array(6 * splatInstanceSize);
+        // const meshPositions = new Float32Array(12 * splatInstanceSize);
+        // const meshIndices = new Uint32Array(6 * splatInstanceSize);
+        let meshPositions = []
+        let meshIndices = []
+
         for (let i = 0; i < splatInstanceSize; ++i) {
-            meshPositions.set([
+            meshPositions.push(
                 -1, -1, i,
                 1, -1, i,
                 1, 1, i,
                 -1, 1, i
-            ], i * 12);
+            );
 
             const b = i * 4;
-            meshIndices.set([
-                0 + b, 1 + b, 2 + b, 0 + b, 2 + b, 3 + b
-            ], i * 6);
+            meshIndices.push(0 + b, 1 + b, 2 + b, 0 + b, 2 + b, 3 + b);
         }
 
         let min = new Vec3
         let max = new Vec3
         this.aabb.getBoundary(min, max)
 
+        // 用 uvs 存储 indices 给 (顶点 shader 里的 vertex_id_attrib) 用
+        const meshUvs = [];
+        for (let i = 0; i < meshIndices.length; i++) {
+            meshUvs[i * 2] = meshIndices[i]
+            meshUvs[i * 2 + 1] = 0
+        }
+
         this.mesh = utils.createMesh({
             positions: meshPositions,
             indices: meshIndices,
+            uvs: meshUvs,
             minPos: min,
             maxPos: max
         })
