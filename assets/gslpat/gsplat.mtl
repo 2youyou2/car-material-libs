@@ -8,44 +8,28 @@
     "__uuid__": "3c7960a5-846d-46df-a670-8e10aa810002",
     "__expectedType__": "cc.EffectAsset"
   },
-  "_techIdx": 0,
+  "_techIdx": 1,
   "_defines": [
-    {},
-    {},
     {}
   ],
   "_states": [
     {
-      "rasterizerState": {},
-      "depthStencilState": {},
+      "rasterizerState": {
+        "cullMode": 0
+      },
+      "depthStencilState": {
+        "depthFunc": 3
+      },
       "blendState": {
         "targets": [
-          {}
-        ]
-      }
-    },
-    {
-      "rasterizerState": {},
-      "depthStencilState": {},
-      "blendState": {
-        "targets": [
-          {}
-        ]
-      }
-    },
-    {
-      "rasterizerState": {},
-      "depthStencilState": {},
-      "blendState": {
-        "targets": [
-          {}
+          {
+            "blendSrc": 1
+          }
         ]
       }
     }
   ],
   "_props": [
-    {},
-    {},
     {}
   ]
 }

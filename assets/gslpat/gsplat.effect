@@ -15,31 +15,31 @@ CCEffect %{
       # migrations: &migs
       #   properties:
       #     mainColor:    { formerlySerializedAs: color }
-    - &planar-shadow
-      vert: planar-shadow-vs:vert
-      frag: planar-shadow-fs:frag
-      phase: planar-shadow
-      propertyIndex: 0
-      depthStencilState:
-        depthTest: true
-        depthWrite: false
-        stencilTestFront: true
-        stencilFuncFront: not_equal
-        stencilPassOpFront: replace
-        stencilRef: 0x80 # only use the leftmost bit
-        stencilReadMask: 0x80
-        stencilWriteMask: 0x80
-      blendState:
-        targets:
-        - blend: true
-          blendSrc: src_alpha
-          blendDst: one_minus_src_alpha
-          blendDstAlpha: one_minus_src_alpha
-    - &deferred-forward
-      vert: unlit-vs:vert
-      frag: unlit-fs:frag
-      phase: deferred-forward
-      propertyIndex: 0
+    # - &planar-shadow
+    #   vert: planar-shadow-vs:vert
+    #   frag: planar-shadow-fs:frag
+    #   phase: planar-shadow
+    #   propertyIndex: 0
+    #   depthStencilState:
+    #     depthTest: true
+    #     depthWrite: false
+    #     stencilTestFront: true
+    #     stencilFuncFront: not_equal
+    #     stencilPassOpFront: replace
+    #     stencilRef: 0x80 # only use the leftmost bit
+    #     stencilReadMask: 0x80
+    #     stencilWriteMask: 0x80
+    #   blendState:
+    #     targets:
+    #     - blend: true
+    #       blendSrc: src_alpha
+    #       blendDst: one_minus_src_alpha
+    #       blendDstAlpha: one_minus_src_alpha
+    # - &deferred-forward
+    #   vert: unlit-vs:vert
+    #   frag: unlit-fs:frag
+    #   phase: deferred-forward
+    #   propertyIndex: 0
   - name: transparent
     passes:
     - vert: unlit-vs:vert
@@ -55,15 +55,15 @@ CCEffect %{
           blendDstAlpha: one_minus_src_alpha
       # properties: *props
       # migrations: *migs
-    - *planar-shadow
-    - &deferred-forward-transparent
-      vert: unlit-vs:vert
-      frag: unlit-fs:frag
-      phase: deferred-forward
-      propertyIndex: 0
-      # migrations: *migs
-      depthStencilState: *d1
-      blendState: *b1
+    # - *planar-shadow
+    # - &deferred-forward-transparent
+    #   vert: unlit-vs:vert
+    #   frag: unlit-fs:frag
+    #   phase: deferred-forward
+    #   propertyIndex: 0
+    #   # migrations: *migs
+    #   depthStencilState: *d1
+    #   blendState: *b1
   # - name: add
   #   passes:
   #   - vert: unlit-vs:vert
@@ -193,15 +193,36 @@ CCProgram unlit-fs %{
   //   in lowp vec4 v_color;
   // #endif
 
-    // #if __VERSION__ >= 110
-    //   in float testaa;
-    // #endif
+    #if __VERSION__ >= 110
+      in vec3 testColor;
+      in vec4 gaussianColor;
+      in vec2 gaussianUV;
+
+      // Fast approximate e^x based on https://nic.schraudolph.org/pubs/Schraudolph99.pdf
+      const float  EXP_A      = 12102203.0;   // ≈ 2^23 / ln(2)
+      const int    EXP_BC_RMS = 1064866808;   // (127 << 23) - 60801 * 8
+      float fastExp(float x) {
+          int i = int(EXP_A * x) + EXP_BC_RMS;
+          return intBitsToFloat(i);
+      }
+
+    #endif
+
 
 
   vec4 frag () {
-    // #if __VERSION__ >= 110
-    //   return vec4(testaa);
-    // #endif
+    #if __VERSION__ >= 110
+      // return vec4(testColor, 1.);
+      mediump float A = dot(gaussianUV, gaussianUV);
+      if (A > 1.0) {
+          discard;
+      }
+
+      // evaluate alpha
+      mediump float alpha = fastExp(-A * 4.0) * gaussianColor.a;
+      return vec4(gaussianColor.xyz * alpha, alpha);
+
+    #endif
 
     return vec4(1.);
 

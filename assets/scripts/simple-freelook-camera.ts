@@ -290,7 +290,7 @@ export class SimpleFreeLookCamera extends Component {
                     this._spherical.phi = clamp(this._spherical.phi + this._rotateDelta.y * (1 - dampFactor), toRadian(freelook.phiMin), toRadian(freelook.phiMax));
                 }
                 if (!freelook.forbidZ) {
-                    this._spherical.radius = clamp(this._spherical.radius * this._distanceScale, 4.8, 8);
+                    this._spherical.radius = clamp(this._spherical.radius * this._distanceScale, 4.8, 150);
                 }
 
                 Vec3_setFromSpherical(__posDelta, this._spherical);

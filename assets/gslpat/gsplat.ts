@@ -2,6 +2,7 @@ import { _decorator, BufferAsset, Camera, Component, director, gfx, Mat4, MeshRe
 import { plyParser } from "./ply-parser";
 import { GSplatResource } from "./scene/gsplat-resource";
 import { GSplatSorter } from "./scene/gsplat-sorter";
+import { EDITOR } from "cc/env";
 const { ccclass, property, executeInEditMode } = _decorator
 const { Filter, SamplerInfo, Address } = gfx
 
@@ -103,16 +104,23 @@ export class GSplat extends Component {
         pass.bindTexture(binding, resource.transformBTexture);
 
         mr.material.setProperty('numSplats', resource.numSplats)
+        mr.material.setProperty('splatColor', resource.colorTexture);
 
     }
 
     lastCameraPosition = new Vec3
     lastCameraDirection = new Vec3
     protected update(dt: number): void {
-        if (this.camera) {
-            let cameraPosition = this.camera.node.worldPosition;
-            let cameraDirection = this.camera.node.forward;
-            const cameraMat = this.camera.node.worldMatrix;
+        let camera = this.camera
+        if (EDITOR) {
+            camera = globalThis.cce.Camera._camera
+        }
+
+        if (camera) {
+            let cameraPosition = camera.node.worldPosition;
+            let cameraDirection = camera.node.forward;
+            cameraDirection = cameraDirection.multiplyScalar(-1)
+            const cameraMat = camera.node.worldMatrix;
             // cameraMat.getTranslation(cameraPosition);
             // cameraMat.getZ(cameraDirection);
 
