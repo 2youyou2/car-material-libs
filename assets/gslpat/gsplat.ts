@@ -16,6 +16,7 @@ function evalTextureSize(count) {
 
 let temp_mat4 = new Mat4
 let temp_vec4 = new Vec4
+let temp_vec3 = new Vec3
 
 
 const _samplerPointInfo = new SamplerInfo(
@@ -46,6 +47,7 @@ export class GSplat extends Component {
     splatOrder: gfx.Texture
 
     sorter: GSplatSorter
+    resource: GSplatResource
 
     protected async __preload() {
         if (!this.data) {
@@ -69,18 +71,28 @@ export class GSplat extends Component {
             dataMap.set(this.data.uuid, resource)
         }
 
+        this.resource = resource
+
+        this.splatOrder = resource.createTexture('splatOrder', gfx.Format.R32UI, evalTextureSize(resource.numSplats))
+
+        this.sorter = new GSplatSorter()
+        this.sorter.init(this.splatOrder, resource.centers)
+
+        this.updateMaterial()
+    }
+
+    updateMaterial() {
+        let resource = this.resource
+        if (!resource) {
+            return
+        }
+
         let mr = this.getComponent(MeshRenderer);
         if (!mr) {
             mr = this.addComponent(MeshRenderer)
         }
 
         mr.mesh = resource.mesh
-
-
-        this.splatOrder = resource.createTexture('splatOrder', gfx.Format.R32UI, evalTextureSize(resource.numSplats))
-
-        this.sorter = new GSplatSorter()
-        this.sorter.init(this.splatOrder, resource.centers)
 
         if (!_pointSampler) {
             _pointSampler = director.root.device.getSampler(_samplerPointInfo)
@@ -117,31 +129,33 @@ export class GSplat extends Component {
         }
 
         if (camera) {
-            let cameraPosition = camera.node.worldPosition;
-            let cameraDirection = camera.node.forward;
-            cameraDirection = cameraDirection.multiplyScalar(-1)
-            const cameraMat = camera.node.worldMatrix;
-            // cameraMat.getTranslation(cameraPosition);
-            // cameraMat.getZ(cameraDirection);
+            // cameraPosition
+            let cameraPosition = temp_vec3.set(camera.node.worldPosition);
 
             const modelMat = this.node.worldMatrix;
             const invModelMat = Mat4.invert(temp_mat4, modelMat);
 
             Vec3.transformMat4(cameraPosition, cameraPosition, invModelMat);
 
+            // cameraDirection
+            let cameraDirection = camera.node.forward;
+            cameraDirection = cameraDirection.multiplyScalar(-1)
+
             temp_vec4.set(cameraDirection.x, cameraDirection.y, cameraDirection.z, 0)
-            Vec3.transformMat4(temp_vec4, temp_vec4, invModelMat);
+            Vec4.transformMat4(temp_vec4, temp_vec4, invModelMat);
             cameraDirection.set(temp_vec4)
+            cameraDirection.normalize()
 
-
-            // invModelMat.transformPoint(cameraPosition, cameraPosition);
-            // invModelMat.transformVector(cameraDirection, cameraDirection);
 
             if (!cameraPosition.equals(this.lastCameraPosition) || !cameraDirection.equals(this.lastCameraDirection)) {
                 this.lastCameraPosition.set(cameraPosition);
                 this.lastCameraDirection.set(cameraDirection);
                 this.sorter.setCamera(cameraPosition, cameraDirection);
             }
+        }
+
+        if (EDITOR) {
+            this.updateMaterial()
         }
     }
 }

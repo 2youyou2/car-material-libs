@@ -94,7 +94,8 @@ class GSplatResourceBase {
             indices: meshIndices,
             // uvs: meshUvs,
             minPos: min,
-            maxPos: max
+            maxPos: max,
+            idxStride: 4
         })
 
         // this.mesh = new Mesh();

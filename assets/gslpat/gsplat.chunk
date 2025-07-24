@@ -1,11 +1,6 @@
 
-#if __VERSION__ >= 110
 
-    #include <legacy/input>
-    #include <builtin/uniforms/cc-global>
-    #include <legacy/decode-base>
-    #include <legacy/local-batch>
-    #include <legacy/input>
+#if __VERSION__ >= 110
 
     struct SplatSource {
         uint order;
@@ -96,8 +91,8 @@
         return true;
     }
 
-    vec4 unpackRotation(vec3 packed) {
-        return vec4(packed.xyz, sqrt(max(0.0, 1.0 - dot(packed, packed))));
+    vec4 unpackRotation(vec3 packedRot) {
+        return vec4(packedRot.xyz, sqrt(max(0.0, 1.0 - dot(packedRot, packedRot))));
     }
     void readCovariance(in SplatSource source, out vec3 covA, out vec3 covB) {
         vec4 tB = texelFetch(transformB, source.uv, 0);
@@ -201,15 +196,27 @@
 
         vec3 modelCenter = readCenter(source);
 
-        testColor = vec3(1.);
-        // testColor = vec3(vec2(source.uv) / 500., 0.);
-        // testColor = vec3(float(source.order) / 500., 0., 0.);
+        gaussianColor.a = 1.;
+        // gaussianColor.rgb = vec3(1.);
+        // gaussianColor.rgb = vec3(vec2(source.uv) / 500., 0.);
+        // gaussianColor.rgb = vec3(float(source.id)  / 500. , 0., 0.);
 
 
         // uvec4 tA = texelFetch(transformA, source.uv, 0);
 
         // testColor = vec3(tA.rgb);
         // testColor = vec3(modelCenter );
+
+        // ---------------   test    --------------------------
+        // vec4 position;
+        // CCVertInput(position);
+
+        // mat4 matWorld;
+        // CCGetWorldMatrix(matWorld);
+
+        // return cc_matProj * (cc_matView * matWorld) * position;
+        // ---------------   test    --------------------------
+
 
 
         if (!initCenter(modelCenter, center)) {
@@ -218,16 +225,6 @@
         
         // testColor = vec3(center.view );
         
-
-        vec4 position;
-        CCVertInput(position);
-
-        mat4 matWorld;
-        CCGetWorldMatrix(matWorld);
-
-
-        // return cc_matProj * (cc_matView * matWorld) * position;
-
 
         if (!initCorner(source, center, corner)) {
             return discardVec;
