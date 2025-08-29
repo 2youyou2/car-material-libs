@@ -1,0 +1,870 @@
+syntax = "proto3";
+
+package DesayALGSerialization;
+
+message DrivingSignals
+{
+    enum ACCStatus {
+        ACC_OFF                       =0;
+        ACC_PASSIVE                   =1;
+        ACC_STANDBY                   =2;
+        ACC_ACTIVE                    =3;
+        ACC_STANDSTILL_ACTIVE         =4;
+        ACC_STANDSTILL_WAIT           =5;
+        ACC_OVERRIDE                  =6;
+        ACC_BRAKE_ONLY                =7;
+        ACC_FAULT                     =8;
+        ACC_RESERVED                  =9;
+    }
+
+    enum ICAStatus {
+        ICA_OFF                       =0;
+        ICA_PASSIVE                   =1;
+        ICA_STANDBY                   =2;
+        ICA_ACTIVE                    =3;
+        ICA_OVERRIDE                  =4;
+        ICA_FAULT                     =5;
+        ICA_RESERVED                  =6;
+    }
+
+    enum DistRange {
+        DISTRANGE_OFF                    = 0;
+        DISTRANGE_SHORTEST_RANGE         = 1;
+        DISTRANGE_SHORT_RANGE            = 2;
+        DISTRANGE_MIDDLE_RANGE           = 3;
+        DISTRANGE_LONG_RANGE             = 4;
+        DISTRANGE_LONGEST_RANGE          = 5;
+    }
+
+    ACCStatus acc_status_enum              = 1;
+    DistRange acc_dist_status_enum         = 2;
+    ICAStatus ica_status_enum              = 3;
+    DistRange ica_dist_status_enum         = 4;
+    uint32 user_set_speed_kph              = 5;
+}
+
+message HmiSignals {
+    enum IteractionTargetTag {
+        OFF                      = 0;
+        NORMAL_FOLLOWING         = 1;
+        CUTIN_IN_PROGRESS        = 2;
+        POTENTIAL_CRASH_ALERT    = 3;
+        IN_ROAD_SIDESHIFT        = 4;
+        RESERVED                 = 5;
+    }
+
+    enum TrafficLightType {
+        TYPE_UNKNOWN            =0;
+        TYPE_FORWARD            =1;
+        TYPE_LEFT_TURN          =2;
+        TYPE_RIGHT_TURN         =3;
+        TYPE_CIRCLE             =4;
+        TYPE_RESERVED           =5;
+    }
+
+    enum TrafficLightColor {
+        COLOR_UNKNOWN            =0;
+        COLOR_RED                =1;
+        COLOR_YELLOW             =2;
+        COLOR_GREEN              =3;
+        COLOR_BLACK              =4;
+        COLOR_RESERVED           =5;
+    }
+
+    repeated uint32 iteraction_target_id                    = 1;
+    repeated IteractionTargetTag iteraction_target_tag_enum = 2;
+    TrafficLightType traffic_light_type_enum                = 3;
+    TrafficLightColor traffic_light_color_enum              = 4;
+    uint32 ego_lane_id                                      = 5;
+    uint32 target_lane_id                                   = 6;
+    uint32 acc_info_enum                                    = 7;
+    uint32 acc_warning_enum                                 = 8;
+    uint32 acc_fault_enum                                   = 9;
+    uint32 ica_info_enum                                    = 10;
+    uint32 ica_warning_enum                                 = 11;
+    uint32 ica_fault_enum	                                = 12;
+    uint32 nca_info_enum                                    = 13;
+    uint32 nca_warning_enum                                 = 14;
+    uint32 nca_fault_enum                                   = 15;
+}
+
+message PanelSignals {
+    DrivingCruisingPanel driving_cruising_panel             = 1;
+    ParkingPanel parking_panel                              = 2;
+}
+
+message DrivingCruisingPanel {
+    DrivingCruisingFunctionSR driving_cruising_func_sr             = 1; //行车巡航功能SR
+    DrivingCruisingFunctionIcon driving_cruising_func_icon		   = 2; //行车巡航功能图标显示状态
+    DrivingCruisingFunctionSwitch driving_cruising_func_switch	   = 3; //行车巡航功能开关状态反馈
+    DrivingCruisingFunctionText driving_cruising_func_txt		   = 4; //行车巡航功能文言提示
+	DrivingCruisingFunctionStatus driving_cruising_func_sts		   = 5; //行车巡航功能状态机
+}
+
+message DrivingCruisingFunctionStatus 
+{
+	uint32 mca_sts_enum								= 1; //记忆行车功能状态机
+}
+
+message DrivingCruisingFunctionText {
+    uint32 acc_disp_info_enum						= 1;
+    uint32 acc_passive_reason_enum					= 2;
+    uint32 acc_failure_reason_enum					= 3;
+    uint32 ica_disp_info_enum						= 4;
+    uint32 nca_disp_info_enum						= 5;
+    uint32 driving_disp_info_enum					= 6; //巡航功能文言提示
+    uint32 driving_abort_reason_enum				= 7; //巡航功能异常退出原因
+    uint32 driving_failure_reason_enum				= 8; //巡航功能故障原因
+    uint32 driving_passive_reason_enum				= 9; //巡航功能被抑制原因
+}
+
+message DrivingCruisingFunctionIcon {
+    uint32 acc_icon_color_enum                              = 1;
+    uint32 ica_icon_color_enum                              = 2;
+    uint32 nca_icon_color_enum                              = 3;
+    uint32 acc_cruise_speed_icon_km_h                       = 4;
+    uint32 mca_map_build_button_enum                        = 5; // MCA地图创建按钮状态
+    uint32 mca_map_build_confirm_button_enum                = 6; // MCA完成地图学习按钮状态
+    uint32 mca_exit_button_enum                				= 7; // MCA退出按钮状态
+    uint32 mca_to_ica_button_enum                			= 8; // MCA与ICA切换按钮状态
+    uint32 mca_recommend_icon_enum                			= 9; // MCA推荐图标按钮状态
+    float mca_learning_dist_km                				= 10; // MCA学习距离 km
+    uint32 mca_map_build_process_bar                		= 11; // MCA地图创建进度 %
+    uint32 mca_icon_color_enum                				= 12; // MCA图标显示
+}
+
+message DrivingCruisingFunctionSwitch {
+    uint32 acc_time_gap_resp_enum                           = 1;
+}
+
+message ParkingPanel {
+    ParkingFunctionIcon parking_func_icon            = 1; // 泊车功能图标显示状态
+    ParkingFunctionText parking_func_txt             = 2; // 泊车功能文本提示
+    ParkingFunctionStatus parking_func_sts           = 3;  // 泊车功能状态机     
+    ParkingFunctionSwitch parking_func_switch        = 4; // 泊车功能软开关
+    ParkingFunctionVoice parking_func_voice          = 5; // 泊车功能声音提示
+    ParkingFunctionSR parking_func_sr                = 6; // 泊车功能渲染信息
+    ParkingFunctionAnalysis parking_func_analysis    = 7; //泊车功能分析统计信息
+}
+
+message ParkingFunctionIcon {
+    uint32 apa_back_stage_icon_enum                 = 1; // APA后台搜车位图标
+    uint32 apa_park_mode_enum                       = 2; // APA子功能模式
+    uint32 rpa_park_mode_enum                       = 3; // RPA子功能模式
+    uint32 hpa_park_mode_enum                       = 4; // HPA子功能模式
+    uint32 hpa_recommend_icon_enum                  = 5; // HPA推荐图标状态
+    uint32 apa_start_park_in_button_enum            = 6; // APA开始泊入按钮状态
+    uint32 apa_start_park_out_button_enum           = 7; // APA开始泊出按钮状态
+    uint32 apa_pause_button_enum                    = 8; // APA暂停按钮状态
+    uint32 apa_continue_button_enum                 = 9; // APA继续按钮状态
+    uint32 apa_exit_button_enum                     = 10; // APA退出按钮状态
+    uint32 hpa_park_in_map_build_button_enum        = 11; // HPA泊入地图创建按钮状态
+    uint32 hpa_park_out_map_build_button_enum       = 12; // HPA泊出地图创建按钮状态
+    uint32 hpa_park_in_map_rebuild_button_enum      = 13; // HPA泊入地图重新创建按钮状态
+    uint32 hpa_park_out_map_rebuild_button_enum     = 14; // HPA泊出地图重新创建按钮状态
+    uint32 hpa_park_in_button_enum                  = 15; // HPA泊入按钮状态
+    uint32 hpa_park_out_button_enum                 = 16; // HPA泊出按钮状态
+    uint32 hpa_pause_button_enum                    = 17; // HPA暂停按钮状态
+    uint32 hpa_continue_button_enum                 = 18; // HPA继续按钮状态
+    uint32 hpa_exit_button_enum                     = 19; // HPA退出按钮状态
+    uint32 hpa_app_control_button_enum              = 20; // HPA可用手机APP控制按钮状态
+    uint32 rpa_app_slot_type_enum                   = 21; // RPA给到APP的车位类型
+    uint32 user_defined_slot_sts_enum               = 22; // 自选车位可用性
+    float  apa_remain_dist_m                        = 23; // APA当前档位下的剩余距离
+    uint32 apa_process_ratio                        =24; //APA当前档位下的百分比 
+    uint32 apa_current_step                         =25; //APA当前步数 
+    uint32 apa_total_step                           =26; //APA总共步数 
+    uint32 apa_used_total_time_s                    =27; //APA总耗时 
+    float hpa_learning_dist_m                       =28; //HPA已学习路线距离 
+    float hpa_remain_path_dist_m                    =29; //HPA剩余路线距离 
+    uint32 hpa_map_build_process_ratio              =30; //HPA地图创建百分比 
+    uint32 hpa_drived_process_ratio                 =31; //HPA已行驶路线百分比 
+    uint32 hpa_used_total_time_s                    =32; //HPA路线总耗时 
+    uint32 park_out_direction_bits                  =33; //泊出方向可用性
+    uint32 apa_gear_icon_enum                       =34; //档位图标显示
+    uint32 hpa_icon_color_enum                      =35; //HPA图标显示
+    uint32 close_button_sts_enum                    =36; //关闭按钮显示状态
+    uint32 apa_park_in_button_enum                  =37; //泊入功能按钮状态
+    uint32 apa_park_out_button_enum                 =38; //泊出功能按钮状态
+    uint32 apa_self_select_button_enum              = 39; // 自选车位功能按钮状态
+    uint32 rpa_button_enum                          = 40; // 遥控泊车功能按钮状态
+    uint32 lpa_button_enum                          = 41; // 离车泊车功能按钮状态
+    uint32 paw_button_enum                          = 42; // 沿途泊入按钮状态
+    uint32 apa_park_out_path_enum                   = 43; // 泊出路径状态
+    uint32 hpa_map_build_confirm_button_enum        = 44; // HPA路线创建确认按钮状态
+    uint32 hpa_map_build_recommand_icon_enum        = 45; // HPA路线创建推荐图标
+    uint32 hpa_button_enum                          = 46; // 记忆泊车按钮状态
+    uint32 tba_button_enum                          = 47; // 循迹倒车按钮状态
+    uint32 tba_start_park_button_enum               = 48; // TBA开始按钮状态
+    uint32 tba_pause_button_enum                    = 49; // TBA暂停按钮状态
+    uint32 tba_continue_button_enum                 = 50; // TBA继续按钮状态
+}
+
+message ParkingFunctionText {
+    uint32 parking_failure_reason_enum            = 1;//泊车功能故障原因
+    uint32 parking_passive_reason_enum            = 2; //泊车功能被抑制原因
+    uint32 parking_abort_reason_enum              = 3; //泊车功能异常退出原因
+    uint32 parking_suspend_reason_enum            = 4;   //泊车功能暂停原因
+    uint32 parking_disp_info_enum                 = 5;    //泊车功能文言提示
+}
+
+message ParkingFunctionStatus {
+    uint32 apa_sts_enum = 1; // APA功能状态机
+    uint32 rpa_sts_enum = 2; // RPA功能状态机
+    uint32 hpa_sts_enum = 3; // HPA功能状态机
+    uint32 meb_sts_enum = 4; // MEB功能状态机（低速紧急制动，类似AEB）
+    uint32 pas_sts_enum = 5; // PAS功能状态机（PDC辅助系统）
+    uint32 tba_sts_enum = 6; // TBA功能状态机（通过摄像头）
+}
+
+message  ParkingFunctionSwitch {
+    uint32 apa_disp_resp_enum                           =1; // APA界面显示反馈
+    uint32 hpa_disp_resp_enum                           =2; // HPA界面显示反馈
+    uint32 apa_view_mode_enum                           =3; // APA界面显示模式反馈
+    uint32 park_out_direction_resp_enum                 =4; // 泊出方向反馈
+    uint32 apa_spd_type_resp_enum                       =5; // APA泊车车速反馈
+    uint32 hpa_spd_type_resp_enum                       =6; // HPA泊车车速反馈
+    uint32 parking_voice_broadcast_type_resp_enum       =7; // 语音播报类型反馈
+}
+
+message  ParkingFunctionVoice {
+    uint32 apa_slot_found_prompt_enum   =1; //APA找到车位提示音
+    uint32 apa_voice_reminder_enum      =2; //APA语音提示
+}
+
+message  ParkingFunctionSR {
+    uint32 parking_slot_num                           =1; //效库位数量
+    repeated ParkingSlotInfo  parking_slot_list   =2; //车位信息列表
+}
+
+message  ParkingSlotInfo {
+    uint32 slot_id                              =1;  //车位ID
+    uint32 slot_number                          = 2; // 车位编号
+    uint32 slot_sts_enum                        = 3; // 车位状态
+    uint32 slot_type_enum                       = 4; // 车位类型
+    uint32 slot_detected_enum                   = 5; // 车位来源
+    float slot_central_point_x_m                = 6; // 车位中心点X坐标
+    float slot_central_point_y_m                = 7; // 车位中心点Y坐标
+    float slot_yaw_deg                          = 8; // POI相对于自车X轴的角度
+    float slot_edge_deg                         = 9; // POI1和POI2的夹角
+    float slot_length_m                         = 10; // 车位长度
+    float slot_width_m                          = 11; // 车位宽度
+    float slot_point1_x_m                       = 12; // 车位角点P0的X坐标
+    float slot_point1_y_m                       = 13; // 车位角点P0的Y坐标
+    float slot_point2_x_m                       = 14; // 车位角点P1的X坐标
+    float slot_point2_y_m                       = 15; // 车位角点P1的Y坐标
+    float slot_point3_x_m                       = 16; // 车位角点P2的X坐标
+    float slot_point3_y_m                       = 17; // 车位角点P2的Y坐标
+    float slot_point4_x_m                       = 18; // 车位角点P3的X坐标
+    float slot_point4_y_m                       = 19; // 车位角点P3的Y坐标
+}
+
+message  ParkingFunctionAnalysis {
+    uint32 apa_current_cycle_succ_times = 1;  // APA功能当前点火周期成功泊入次数
+    uint32 apa_current_cycle_failtimes = 2;  // APA功能当前点火周期失败次数
+    uint32 hpa_current_cycle_succ_times = 3;  // HPA功能当前点火周期成功泊入次数
+    uint32 meb_current_cycle_actimes = 4;  // MEB功能当前点火周期激活次数
+    
+    uint32 hpa_use_number = 5;  // 停车场记忆泊车使用次数
+    uint32 hpa_park_in_success_number = 6;  // 停车场记忆泊车泊入成功次数
+    uint32 apa_use_number = 7;  // APA泊车使用次数
+    uint32 apa_park_in_success_number = 8;  // APA泊车泊入成功次数
+    
+    float apa_park_in_success_ratio = 9;  // APA泊车泊入成功率
+    float apa_park_in_average_time_s = 10;  // APA泊入平均时长
+    float apa_park_out_average_time_s = 11;  // APA泊出平均时长
+    
+    uint32 hpa_pedestrian_avoid_number = 12;  // HPA避免行人次数
+    uint32 hpa_pass_junction_number = 13;  // HPA通过路口次数
+    uint32 hpa_pass_speedbump_number = 14;  // HPA通过减速带次数
+    uint32 hpa_user_intervention_number = 15;  // HPA用户干预次数
+
+}
+
+message AvmPadRequest {
+    uint32 avm_channel_button_req_enum                   = 1;
+    uint32 avm_front_rear_wheel_req_enum                 = 2;
+    uint32 apa_360_button_req_enum                       = 3;
+    uint32 apa_settings_voice_prompt_req_enum            = 4;
+    uint32 apa_settings_protocal_prompt_req_enum         = 5;
+    uint32 apa_settings_transparent_chassis_req_enum     = 6;
+    uint32 pad_video_channel_enum                        = 7;
+}
+
+message ParkingPadRequest {
+   uint32 apa_act_req_enum                   = 1;   //APA功能激活请求
+    uint32 rpa_act_req_enum                  = 2;   //RPA功能激活请求
+    uint32 lpa_act_req_enum                 = 3;    //离车泊入功能激活请求
+    uint32 apa_park_mode_req_enum             = 4;   //APA泊车模式请求
+    uint32 apa_park_type_req_enum             = 5;   //车头车尾泊入切换请求
+    int64 apa_park_slot_select_id             = 6;   //用户选择车位编号
+    uint32 apa_park_in_req_enum               = 7;   //开始泊入按钮请求
+    uint32 apa_pause_req_enum                 = 8;   //暂停泊入按钮请求
+    uint32 apa_continue_req_enum              = 9;   //继续泊入按钮请求
+    uint32 apa_exit_req_enum                  = 10;   //退出按钮请求
+    uint32 apa_spd_type_req_enum              = 11;   //APA泊车车速调节请求
+    uint32 apa_park_out_req_enum              = 12;   //开始泊出按钮请求
+    uint32 apa_park_out_direction_req_enum    = 13;   //泊出方向请求
+    Point3f apa_self_select_point0              = 14;   //自选车位角点P0坐标
+    Point3f apa_self_select_point1           = 15;   //自选车位角点P1坐标
+    Point3f apa_self_select_point2              = 16;   //自选车位角点P2坐标
+    Point3f apa_self_select_point3              = 17;   //自选车位角点P3坐标
+    float apa_self_select_slot_angle_deg      = 18;   //自选车位角度
+    float apa_self_select_slot_x_m            = 19;   //自选车位中心点x坐标
+    float apa_self_select_slot_y_m            = 20;   //自选车位中心点y坐标
+    float apa_self_select_slot_length_m       = 21;   //自选车位长
+    float apa_self_select_slot_width_m        = 22;   //自选车位宽
+    uint32 apa_move_self_select_enum          = 23;   //自选车位是否被拖动
+    uint32 parking_voice_broadcast_type_req_enum  = 24;   //语音播报类型请求
+    uint32 hpa_act_req_enum  = 25;   //记忆泊车功能激活请求
+    uint32 hpa_park_in_map_build_req_enum  = 26;   //HPA泊入路线创建按钮请求
+    uint32 hpa_park_out_map_build_req_enum  = 27;   //HPA泊出路线创建按钮请求
+    uint32 hpa_park_in_map_rebuild_req_enum  = 28;   //HPA泊入路线重新创建按钮请求
+    uint32 hpa_park_out_map_rebuild_req_enum  = 29;   //HPA泊出路线重新创建按钮请求
+    uint32 hpa_map_build_confirm_req_enum  = 30;   //HPA路线创建确认按钮请求
+    uint32 hpa_park_in_req_enum  = 31;   //HPA泊入按钮请求
+    uint32 hpa_park_out_req_enum  = 32;   //HPA泊出按钮请求
+    uint32 hpa_pause_req_enum  = 33;   //HPA暂停按钮请求
+    uint32 hpa_continue_req_enum  = 34;   //HPA继续按钮请求
+    uint32 hpa_exit_req_enum  = 35;   //HPA退出按钮请求
+    uint32 hpa_back_req_enum  = 36;   //HPA返回按钮请求
+    uint32 hpa_app_control_req_enum = 37; //手机APP按钮请求
+    uint32 hpa_spd_type_req_enum = 38;    //HPA泊车车速调节请求
+    int64 hpa_map_id = 39;                //用户点击HPA地图ID
+    uint32 hpa_delete_map_req_enum = 40;  //地图删除请求
+    uint32 paw_req_enum = 41;             //沿途泊入按钮请求
+    uint32 tba_act_req_enum = 42;         //循迹倒车功能激活请求
+    uint32 tba_start_park_req_enum = 43;  //TBA开始按钮请求
+    uint32 tba_pause_req_enum = 44;       //TBA暂停按钮请求
+    uint32 tba_continue_req_enum = 45;    //TBA继续按钮请求
+    uint32 pad_display_mode_enum = 46;    //PAD界面显示状态
+
+}
+
+message VehicleSpeed {
+    float dsp_veh_spd_kph                  = 1;
+}
+
+message LightStatus {
+    bool is_left_dircn_ind_lamp_on         = 1; //左转向灯
+    bool is_right_dircn_ind_lamp_on        = 2; //右转向灯
+    bool is_main_beam_light_on             = 3; //远光灯
+	bool is_dipped_beam_light_on             = 4; //近光灯
+	bool is_frt_fog_light_on             	= 5; //前雾灯
+	bool is_rr_fog_light_on             	= 6; //后雾灯
+	uint32 side_brake_light_sts_enum          = 7; //左右两侧刹车灯状态
+	uint32 centre_hight_brake_light_sts_enum   = 8; //高位刹车灯状态
+}
+
+message BrakePedal {
+    uint32 brkpdl_appd_enum                = 1;
+}
+
+message VehicleDynamic {
+    VehicleSpeed vehspd             = 1;//自车车速
+    VehicleAcceleration vehaccl     = 2;//车辆加速度
+    MovingStatus movgsts            = 3; //车辆运动状态
+}
+
+message VehicleAcceleration {
+	float long_accl_m_s2            = 1; //纵向加速度
+}
+
+message VehicleBody {
+    LightStatus light_sts             = 1;//自车车灯
+}
+message MovingStatus {
+    uint32 vehstst_sts_enum         =1;//车辆静止状态
+    bool is_vehstst_sts_vld         =2; //车辆静止状态有效性
+    uint32 veh_movg_dir_enum        =3; //车辆运动方向
+}
+
+
+message BrakeSystem {
+    BrakePedal brkpdl               = 1;
+}
+
+message SteeringSystem {
+    float pnnagsae_deg               = 1; //方向盘转角
+}
+
+message PowerTrain {
+    Gear gear             			= 1;//挡位信息
+}
+
+message Gear {
+	bool is_actv_gear_vld			= 1;//当前挡位有效性
+	uint32 actv_gear_enum			= 2;//当前挡位
+}
+
+message DrivingCruisingFunctionSR {
+    uint32 lane_change_step_enum              = 1;
+    repeated uint32 iteraction_target_id_list = 2;
+    repeated uint32 iteraction_target_tag_enum_list = 3;
+    uint32 target_lane_id					 = 4;
+    repeated uint32 traffic_light_type_enum			 = 5;
+    repeated uint32 traffic_light_color_enum			 = 6;
+    uint32 cipv_id							 = 7;
+    uint32 cipv_tag_enum					 = 8;
+    uint32 traffic_light_countdown			 = 9;//红绿灯倒计时
+}
+
+message FSMNodeInfo {
+    enum DrivingMode {
+        NOT_RUNNING    = 0;
+        APA            = 1;
+        RPA            = 2;
+        AVP            = 3;
+        ACC            = 4;
+        ICA            = 5;
+        NCA            = 6;
+        RESERVED       = 7;
+    }
+
+    DrivingMode driving_mode_enum             = 1;
+    uint32 function_sts_enum                  = 2;
+}
+
+message Vertex{
+    float x_m = 1;
+    float y_m = 2;
+    float z_m = 3;
+    float h_m = 4;
+}
+
+message CubicCurve{
+    float start_x_m  = 1;
+    float end_x_m    = 2;
+    float c0         = 3;
+    float c1         = 4;
+    float c2         = 5;
+    float c3         = 6;
+}
+
+message SamplingPoint{
+    float x_m = 1;
+    float y_m = 2;
+}
+
+message GeometryLine{
+    bool is_curve_valid                        = 1;
+    CubicCurve curve                           = 2;
+    bool is_sampling_point_valid               = 3;
+    uint32 number_of_sampling_point            = 4;
+    repeated SamplingPoint sampling_point_list = 5;
+}
+
+message StaticElement{
+    uint32 id                     = 1;
+    uint32 class_enum             = 2;
+    uint32 num_of_vertices        = 3;
+    repeated Vertex vertices_list = 4;
+    uint32 height_property_enum   = 5;  //高度属性
+}
+
+message SegLane {
+    uint64 id                  = 1;
+    float lane_width_m         = 2;
+    GeometryLine lane_geometry = 3;
+}
+
+message SegLaneLine{
+    uint32 id             = 1;
+    GeometryLine geometry = 2;
+}
+
+message SegLaneLineAttr{
+    enum LineType {
+        NONE                                    =0;
+        SOLID_LINE                              =1;
+        DASHED_LINE                             =2;
+        LEFT_SOLID_LINE_RIGHT_DASHED_LINE       =3;
+        RIGHT_SOLID_LINE_LEFT_DASHED_LINE       =4;
+        DOUBLE_SOLID_LINE                       =5;
+        DOUBLE_DASHED_LINE                      =6;
+        COMPENSATION                            =7;
+        BOTTS_LINE                              =8;
+        VIRTUAL                                 =9;
+        RESERVED                                =10;
+        CURB                                    =11;
+        GUARDRAIL                               =12;
+        UNKNOWN                                 =255;
+    }
+
+    enum Color {
+        COLOR_UNKNOWN            =0;
+        COLOR_WHITE              =1;
+        COLOR_YELLOW             =2;
+        COLOR_BLUE               =3;
+        COLOR_RED                =4;
+        COLOR_BLACK              =5;
+        COLOR_GREEN              =6;
+        COLOR_GREY               =7;
+    }
+    float start_offset_m = 1;
+    float end_offset_m   = 2;
+    LineType type        = 3;
+    Color color          = 4;
+}
+
+message SegRoadEdge{
+    uint32 id             = 1;
+    GeometryLine geometry = 2;
+}
+
+message Slot {
+    uint32 slot_id                  = 1;
+    bool is_slot_being_occupied     = 2;
+    Point3f p0                      = 3;
+    Point3f p1                      = 4;
+    Point3f p2                      = 5;
+    Point3f p3                      = 6;
+    uint32 type_enum                = 7;
+    uint32 location_enum            = 8;
+    float  width_m                  = 9; //车位宽度
+    float  depth_m                  = 10; //车位深度
+    float p0p3_angle_rad            = 11;//p0p3和开口边的夹角度数
+    float p1p2_angle_rad            = 12; //p1p2和开口边的夹角度数
+    bool is_wheel_stop_valid        =13; //是否存在轮档
+    repeated Point3f wheel_stop_position  = 14; //轮档在odom坐标系下位置
+    bool is_to_release              = 15;  //是否可以释放
+}
+
+message Lane{
+    uint32 id                                        = 1;
+    uint32 num_of_seg_lane                           = 2;
+    repeated SegLane seg_lane_list                   = 3;
+    uint32 num_of_seg_lane_attr                      = 4;
+    repeated SegLaneAttr seg_lane_attr_list			 = 5;
+    uint32 position_enum                             = 6;
+    uint32 num_of_right_lane_line                    = 7;
+    repeated uint32 right_lane_line_id_list          = 8;
+    uint32 num_of_left_lane_line                     = 9;
+    repeated uint32 left_lane_line_id_list           = 10;
+}
+
+message SegLaneAttr {
+    float start_offset_m  = 1;
+    float end_offset_m    = 2;
+    uint32 lane_type_enum = 3;
+}
+
+
+message LaneLine{
+    uint32 id                                        = 1;
+    uint32 num_of_seg_lane_line                      = 2;
+    repeated SegLaneLine seg_lane_line_list          = 3;
+    uint32 num_of_seg_lane_line_attribute            = 4;
+    repeated SegLaneLineAttr seg_lane_line_attr_list = 5;
+    uint32 position_enum                             = 6;
+}
+
+message RoadEdge{
+    uint32 id                                = 1;
+    uint32 num_of_seg_road_edge              = 2;
+    repeated SegRoadEdge seg_road_edges_list = 3;
+}
+
+message Point3f{
+    float x_m = 1;
+    float y_m = 2;
+    float z_m = 3;
+}
+
+message FusionObject {
+    uint32 id                                   = 1;
+    uint32 classification_enum				    = 2;
+    Point3f pos_center_m                        = 3;
+    Point3f pos_ref_m                           = 4;
+    float yaw_rad                               = 5;
+    repeated bool is_light_flashing             = 6;
+    uint32 motion_type_enum             		= 7; //运动属性类别
+}
+
+message LandMarker {
+    uint32 id                  = 1;
+    uint32 type_enum       	   = 2;
+    Point3f position           = 3;
+    float orientation_rad      = 4;
+    float length_m             = 5;
+    float width_m              = 6;
+}
+
+//行车闸机信号
+message LandMarker2 {
+    uint32 id                  = 1;
+    uint32 type_enum       	   = 2;
+    Point3f position           = 3;
+    float orientation_rad      = 4;
+    float length_m             = 5;
+    float width_m              = 6;
+    uint32 traffic_light_status_enum        = 7; //ETC闸机通行状态
+}
+
+message ReflineViz {
+    float x_m            = 1;
+    float y_m            = 2;
+    float z_m            = 3;
+    float left_width_m   = 4;
+    float right_width_m  = 5;
+}
+
+message TrajViz {
+    float x_m       = 1;
+    float y_m       = 2;
+    float z_m       = 3;
+    float s_m       = 4;
+    float v_m_s     = 5;
+}
+
+message VehicleTrajectory {
+    repeated TrajectoryPoint pts_list		= 1;
+}
+
+message TrajectoryPoint {
+    float x_m								= 1;
+    float y_m								= 2;
+}
+
+
+message Pose {
+	Point3f position						= 1; //位置（米）
+	Quaternion4f orientation				= 2; //朝向（四元数）
+}
+
+message Quaternion4f {
+    float x       							= 1;
+    float y       							= 2;
+    float z       							= 3;
+    float w       							= 4;
+}
+
+
+//静态障碍物
+message StaticElements{
+    uint32 num_of_elements               = 1;
+    repeated StaticElement elements_list = 2;
+}
+
+//交通车道线,车道,路沿
+message Road{
+    uint32 num_of_lane_line           = 1;
+    repeated LaneLine lane_lines_list = 2;
+    uint32 num_of_roadedge            = 3;
+    repeated RoadEdge road_edges_list = 4;
+    uint32 num_of_lane                = 5;
+    repeated Lane lanes_list          = 6;
+}
+
+//交通参与者
+message FusionObjects {
+    uint32 number_of_objects               = 1;
+    repeated FusionObject objects          = 2;
+}
+
+//车位信息
+message SlotsList {
+    uint32 num_of_parking_slots               = 1;
+    repeated Slot slots_list                  = 2;
+}
+
+//地面箭头
+message LandMarkers {
+    uint32 num_of_traffic_landmarkers     = 1;
+    repeated LandMarker land_markers_list = 2;
+}
+
+//FSM输出信号
+message FsmOut {
+    FSMNodeInfo fsm_node_info            = 1;
+    DrivingSignals drv_signals           = 2;
+    HmiSignals hmi_signals               = 3;
+    PanelSignals panel_signals           = 4;
+	ParkingSignals prk_signals           = 5;
+	uint32 drv_prk_dual_info_enum        = 6;
+
+}
+
+//自车基础信息
+message VehicleChassis {
+    VehicleDynamic vehdyn                   = 1; //车辆运动状态
+    BrakeSystem brksys                      = 2; //制动系统状态
+    PowerTrain pt                      		= 3; //动力系统状态
+    SteeringSystem strsys                   = 4; //转向系统状态
+}
+
+
+
+//自车状态信息
+message VehicleStatus {
+    VehicleBody vehbody                      = 1;
+}
+
+//参考线和轨迹线
+message PathInfoHmi {
+    uint32 num_refline_viz_pts             = 1;
+    repeated ReflineViz refline_viz_pts    = 2;
+    uint32 num_traj_viz_pts                = 3;
+    repeated TrajViz traj_viz_pts          = 4;
+}
+
+//HMI请求信息
+message HMIRequest {
+    ParkingPadRequest parking_pad_req     = 1;
+    AvmPadRequest avm_pad_req             = 2;
+}
+
+//AVM信号回复
+message AvmPadRespone {
+    uint32 avm_channel_button_resp_enum            = 1;
+    uint32 avm_front_rear_wheel_resp_enum          = 2;
+    uint32 apa_360_button_sts_enum                 = 3;
+    uint32 apa_settings_resp_enum                  = 4;
+}
+
+//自车轨迹
+message AutoDriveInfo {
+    VehicleTrajectory trajectory			= 1;
+}
+//DR信号
+message Odometry {
+	Pose pose								= 1;    //位姿
+    uint32 status_bits                      = 2;    //dr状态
+    uint32 source_bits                      = 3;    //信号源
+    Twist twist                             = 4;    //线速度/角速度
+    Acceleration accelaration               = 5;    //加速度
+    uint32 chassis_diag_bits                = 6; 	//底盘诊断状态
+    uint32 imu_diag_bits                    = 7;	//IMU诊断状态
+    repeated float  internal_signal_list    = 8;	//算法内部参数
+}
+
+message Twist {
+    Vector3f  linear    =1; //线速度
+    Vector3f  angular    =2; //角速度
+}
+
+message Acceleration {
+    Vector3f  accelaration    =1; //线加速度
+}
+
+message Vector3f {
+    float x   =1;
+    float y   =2;
+    float z   =3;
+}
+
+
+//可通行区域
+message DrivableArea 
+{
+	float origin_x_m						= 1; //grid原点x坐标
+	float origin_y_m						= 2; //grid原点y坐标
+	repeated uint32 data					= 3; //数据 dr世界系 size：440x55
+}
+
+//行车闸机
+message LandMarkers2 {
+    uint32 num_of_traffic_landmarkers     = 1;
+    repeated LandMarker2 land_markers_list = 2;
+}
+
+
+//泊车信号
+message ParkingSignals {
+    uint32 parking_slot_id      =1; //车位ID
+    uint32 hpa_map_id           =2; //hap地图ID
+    uint32 hpa_delete_map_ip    =3; //删除地图ID
+    uint32 apa_park_mode_enum   =4; //APA子功能模式
+    uint32 park_in_type_enum    =5; //泊入方式
+    uint32 hpa_park_in_type_enum=6; //HPA泊入方式
+    uint32 apa_park_in_req_enum =7; //开始泊入按钮请求
+    uint32 park_out_direction_req_enum=8; //泊出方向
+    uint32 apa_spd_type_req_enum=9; //APA泊车车速调节请求
+    uint32 slot_matched_sts_enum=10; //目标车位匹配状态
+    ApaSelfSelect apa_self_select =11; //自选车位信息
+    uint32 left_mirror_sts_enum =12; //左后视镜状态枚举
+    uint32 right_mirror_sts_enum =13; //右后视镜状态枚举
+}
+
+// 自选车位信息
+message ApaSelfSelect {
+ uint32 slot_type_enum = 1; // 车位类型: 0x0=None; 0x1=Horizontal; 0x2=Vertical; 0x3=Slant
+ uint32 slot_location_enum = 2; // 车位位置: 0x0=None; 0x1=Left; 0x2=Right
+ Point3f apa_self_select_point0 = 3; // 自选车位角点P0坐标
+ Point3f apa_self_select_point1 = 4; // 自选车位角点P1坐标
+ Point3f apa_self_select_point2 = 5; // 自选车位角点P2坐标
+ Point3f apa_self_select_point3 = 6; // 自选车位角点P3坐标
+ float apa_self_select_slot_angle_deg = 7; // 自选车位角度
+ float apa_self_select_slot_x_m = 8; // 自选车位中心点x坐标
+ float apa_self_select_slot_y_m = 9; // 自选车位中心点y坐标
+ float apa_self_select_slot_length_m = 10; // 自选车位长度
+ float apa_self_select_slot_width_m = 11; // 自选车位宽度
+}
+
+
+//泊车轨迹
+message TrajectoryOut {
+   uint32  num_traj_pts       =1;   // 轨迹点个数
+   float total_traj_length_m =2; // 轨迹总长度
+   float target_speed_m_s  =3;  // 规划目标速度
+   uint32 target_speed_reason_enum =4; // 规划目标速度原因
+   uint32 traj_pts_num       =5;   // 有效轨迹点数  
+   repeated PathPoint traj_pts        =6;   //轨迹点集 
+}
+
+
+//轨迹点集
+message PathPoint {
+    float t_s                 = 1;            // 相对时间
+    float x_m                 = 2;            // x坐标(DR系) 
+    float y_m                 = 3;            // y坐标(DR系)
+    float z_m                 = 4;            // z坐标(DR系)
+    float theta_rad           = 5;      // 航向角(DR系)
+    float kappa_l_m           = 6;      // 曲率
+    float dkappa_l_m          = 7;     // 曲率变化率
+    float s_m                 = 8;            // 轨迹点相对距离
+    float v_m_s               = 9;          // 速度
+    float a_m_s2              = 10;        // 加速度
+    float da_m_s3             = 11;       // 加加速度
+    uint32 gear_enum            = 12;      // 档位
+}
+
+//超声波雷达信息
+message UssPdcData {
+	uint32 uss_distance_rrs_mm				= 1; //右后边缘的距离信息
+	uint32 uss_distance_rr_mm				= 2; //右后侧的距离信息
+	uint32 uss_distance_rrm_mm				= 3; //后右中间的距离信息
+	uint32 uss_distance_rlm_mm				= 4; //左后中间的距离信息
+	uint32 uss_distance_rl_mm				= 5; //左后侧的距离信息
+	uint32 uss_distance_rls_mm				= 6; //左后边缘的距离信息
+	uint32 uss_distance_frs_mm				= 7; //右前边缘的距离信息
+	uint32 uss_distance_fr_mm				= 8; //右前侧的距离信息
+	uint32 uss_distance_frm_mm				= 9; //右前中间的距离信息
+	uint32 uss_distance_flm_mm				= 10; //左前中间的距离信息
+	uint32 uss_distance_fl_mm				= 11; //左前侧的距离信息
+	uint32 uss_distance_fls_mm				= 12; //左前边缘的距离信息
+}
+
+//激光雷达
+message PointCloud2 {
+	uint32 height 							= 1; // 点云的高度（行数）
+	uint32 width 							= 2; // 点云的宽度（每行的点数）
+	repeated PointField fields 				= 3; // 点云字段的描述
+	bool is_bigendian 						= 4; // 数据是否为大端字节序
+	uint32 point_step 						= 5; // 每个点的字节数
+	uint32 row_step 						= 6; // 每行的字节数
+	repeated uint32 data 					= 7; // 点云数据 size is (row_step*height)
+	bool is_dense 							= 8; // 点云是否密集（是否包含无效点）
+}
+
+//点云字段的描述
+message PointField {
+	string name 							= 1; // 字段名称
+	uint32 offset 							= 2; // 从点结构的起始位置的偏移量
+	uint32 datatype 						= 3; // 数据类型枚举
+	uint32 count 							= 4; // 字段中的元素数量
+}
+
+
+
+

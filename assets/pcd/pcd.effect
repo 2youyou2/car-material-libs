@@ -1,0 +1,89 @@
+// Effect Syntax Guide: https://docs.cocos.com/creator/manual/zh/shader/index.html
+
+CCEffect %{
+  techniques:
+  - name: opaque
+    passes:
+    - vert: unlit-vs:vert
+      frag: unlit-fs:frag
+      properties: &props
+        mainTexture:    { value: white }
+        mainColor:      { value: [1, 1, 1, 1], editor: { type: color } }
+
+        intensity: { value: 0.1 }
+  - name: transparent
+    passes:
+    - vert: unlit-vs:vert
+      frag: unlit-fs:frag
+      blendState:
+        targets:
+        - blend: true
+          blendSrc: src_alpha
+          blendDst: one_minus_src_alpha
+          blendSrcAlpha: src_alpha
+          blendDstAlpha: one_minus_src_alpha
+      properties: *props
+}%
+
+CCProgram unlit-vs %{
+  precision highp float;
+
+    
+  #include <legacy/input>
+  #include <builtin/uniforms/cc-global>
+  #include <legacy/decode-base>
+  #include <legacy/local-batch>
+  #include <legacy/input>
+
+  out vec2 v_uv;
+
+  in float a_intensity;
+  out float v_intensity;
+
+  vec4 vert () {
+
+    vec4 position;
+    CCVertInput(position);
+
+    mat4 matWorld;
+    CCGetWorldMatrix(matWorld);
+
+    v_intensity = a_intensity;
+
+    gl_PointSize = 2.;
+
+    return cc_matProj * (cc_matView * matWorld) * position;
+  }
+
+}%
+
+
+CCProgram unlit-fs %{
+  precision highp float;
+  #include <legacy/output>
+  #include <legacy/fog-fs>
+
+  in vec2 v_uv;
+  in float v_intensity;
+
+  uniform sampler2D mainTexture;
+
+  uniform Constant {
+    vec4 mainColor;
+    float intensity;
+  };
+
+  vec4 frag () {
+    // return vec4(1.);
+
+    vec4 col = mainColor;
+    col.rgb *= v_intensity * intensity;
+
+    #if USE_TEXTURE
+    col *= texture(mainTexture, v_uv);
+    #endif
+
+    // CC_APPLY_FOG(col, v_position);
+    return CCFragOutput(col);
+  }
+}%
