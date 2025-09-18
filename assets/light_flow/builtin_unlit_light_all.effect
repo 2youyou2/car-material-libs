@@ -1,0 +1,305 @@
+// Copyright (c) 2017-2020 Xiamen Yaji Software Co., Ltd.
+CCEffect %{
+  techniques:
+  - name: opaque
+    passes:
+    - vert: unlit-vs:vert
+      frag: unlit-fs:frag
+      properties: &props
+        mainTexture:    { value: grey }
+        tilingOffset:   { value: [1, 1, 0, 0] }
+        mainColor:      { value: [1, 1, 1, 1], linear: true, editor: { type: color } }
+        colorScale:     { value: [1, 1, 1], target: colorScaleAndCutoff.xyz }
+        alphaThreshold: { value: 0.5, target: colorScaleAndCutoff.w, editor: { parent: USE_ALPHA_TEST } }
+        color:          { target: mainColor, linear: true, editor: { visible: false } } # backward compability
+        scaleXFactor:    { value: 1.0, target: moveFactor.x, editor: { displayName: '平铺X缩放系数'}}
+        scaleYFactor:    { value: 1.0, target: moveFactor.y, editor: { displayName: '平铺Y缩放系数'}}
+
+        lightMoveSpeedX: { value: 0.0, target: moveFactor.z, editor: { slide: true, step: 0.01, range: [-20.0, 20.0], displayName: 运动速度X }}
+        lightMoveSpeedY: { value: 0.0, target: moveFactor.w, editor: { slide: true, step: 0.01, range: [-20.0, 20.0], displayName: 运动速度Y }}
+        lightMoveSpeedControl: { value: 1.0, editor: { slide: true, step: 1, range: [0, 1], displayName: 运动速度作用到整段上}}
+
+        colorBlend:    { value: [1, 1, 1, 1], editor: { type: color } }
+        colorBlendIntensity:    { value: 1, editor: { parent: USE_COLOR_BLEND_MAP } }
+        colorBlendMap:       { value: black }
+        colorBlendMapUseUVOffset:       {value: 1.0, editor: { step: 1, range: [0, 1], displayName: '是否使用UVOffset (ColorBlendMap)', parent: USE_COLOR_BLEND_MAP}}
+        
+        colorAlphaMap:       { value: white }
+        colorAlphaMapUseUVOffset:       {value: 1.0, editor: { step: 1, range: [0, 1], displayName: '是否使用UVOffset (ColorAlphaMap)', parent: USE_COLOR_ALPHA_MAP }}
+
+        moveAlphaFactorX:  { value: 0.0, editor: { slide: true, step: 0.01, range: [-1., 1.0], displayName: 'alpha 移动系数X'} }
+        moveAlphaFactorY:  { value: 0.0, editor: { slide: true, step: 0.01, range: [-1., 1.0], displayName: 'alpha 移动系数Y'} }
+        opacity:            { value: 1.0, editor: { slide: true, range: [0, 1.0], step: 0.001 } }
+        
+      migrations: &migs
+        properties:
+          mainColor:    { formerlySerializedAs: color }
+  - name: transparent
+    passes:
+    - vert: unlit-vs:vert
+      frag: unlit-fs:frag
+      depthStencilState: &d1
+        depthTest: true
+        depthWrite: false
+      blendState:
+        targets:
+        - blend: true
+          blendSrc: src_alpha
+          blendDst: one_minus_src_alpha
+          blendDstAlpha: one_minus_src_alpha
+      properties: *props
+      migrations: *migs
+  - name: add
+    passes:
+    - vert: unlit-vs:vert
+      frag: unlit-fs:frag
+      rasterizerState: &r1 { cullMode: none }
+      depthStencilState: *d1
+      blendState:
+        targets:
+        - blend: true
+          blendSrc: src_alpha
+          blendDst: one
+          blendSrcAlpha: src_alpha
+          blendDstAlpha: one
+      properties: *props
+      migrations: *migs
+  - name: alpha-blend
+    passes:
+    - vert: unlit-vs:vert
+      frag: unlit-fs:frag
+      rasterizerState: *r1
+      depthStencilState: *d1
+      blendState:
+        targets:
+        - blend: true
+          blendSrc: src_alpha
+          blendDst: one_minus_src_alpha
+          blendSrcAlpha: src_alpha
+          blendDstAlpha: one_minus_src_alpha
+      properties: *props
+      migrations: *migs
+}%
+
+CCProgram UBO %{
+
+  uniform Constant {
+    vec4 mainColor;
+    vec4 colorScaleAndCutoff;
+    vec4 tilingOffset;
+    vec4 moveFactor;
+    float opacity;
+    float lightMoveSpeedControl;
+    float colorBlendMapUseUVOffset;
+    float colorAlphaMapUseUVOffset;
+    float colorBlendIntensity;
+  };
+
+}%
+
+
+CCProgram unlit-vs %{
+  precision highp float;
+  #include <legacy/input>
+  #include <builtin/uniforms/cc-global>
+  #include <legacy/decode-base>
+  #include <legacy/local-batch>
+  #include <legacy/input>
+  #include <legacy/fog-vs>
+
+  #include <UBO>
+
+  #if USE_VERTEX_COLOR
+    in lowp vec4 a_color;
+    out lowp vec4 v_color;
+  #endif
+
+  // #if USE_TEXTURE
+    out vec2 v_uv;
+    // out vec4 cctime;
+  // #endif
+
+  out vec2 v_originUV;
+  out vec4 v_tilingOffset;
+
+  vec4 vert () {
+    vec4 position;
+    CCVertInput(position);
+
+    mat4 matWorld;
+    CCGetWorldMatrix(matWorld);
+
+    // #if USE_TEXTURE
+      v_tilingOffset.xy = tilingOffset.xy;
+
+      v_originUV = a_texCoord;
+
+      vec2 uv = a_texCoord * tilingOffset.xy;
+
+      vec2 offset = tilingOffset.zw;
+
+      if (lightMoveSpeedControl == 1.) {
+        offset.x += cc_time.x * moveFactor.z;
+        offset.y += cc_time.x * moveFactor.w;
+      }
+
+      v_tilingOffset.zw = offset;
+      
+      uv += offset;
+
+      v_uv = uv;
+
+      // #if SAMPLE_FROM_RT
+      //   CC_HANDLE_RT_SAMPLE_FLIP(v_uv);
+      // #endif
+      // cctime = cc_time;
+    // #endif
+
+    #if USE_VERTEX_COLOR
+      v_color = a_color;
+    #endif
+
+    CC_TRANSFER_FOG(matWorld * position);
+    return cc_matProj * (cc_matView * matWorld) * position;
+  }
+}%
+
+CCProgram unlit-fs %{
+  precision highp float;
+  #include <legacy/output-standard>
+  #include <legacy/fog-fs>
+
+  #include <UBO>
+
+  #if USE_ALPHA_TEST
+    #pragma define-meta ALPHA_TEST_CHANNEL options([a, r, g, b])
+  #endif
+
+  in vec2 v_uv;
+
+  #if USE_TEXTURE
+    uniform sampler2D mainTexture;
+    // in vec4 cctime;
+  #endif
+
+  #if USE_VERTEX_COLOR
+    in lowp vec4 v_color;
+  #endif
+  
+  #if USE_COLOR_BLEND_MAP
+    uniform sampler2D colorBlendMap;
+    uniform ColorBlend{
+      vec4 colorBlend;
+    };
+  #endif
+  #if USE_COLOR_ALPHA_MAP
+    uniform sampler2D colorAlphaMap;
+  #endif
+
+  #if USE_MOVE_ALPHA
+    uniform MoveAlphaFactor{
+      float moveAlphaFactorX;
+      float moveAlphaFactorY;
+    };
+  #endif
+
+  in vec4 v_tilingOffset;
+  in vec2 v_originUV;
+
+  float remapMoveAlphaFactor (float moveAlphaFactor, float uvComponent, float uvMax) {
+    float alpha = 1.;
+    if (moveAlphaFactor > 0.) {
+      alpha = smoothstep(moveAlphaFactor - 0.1, moveAlphaFactor, uvComponent / (uvMax + 0.1));
+    }
+    else if (uvComponent < (uvMax + 0.1)) {
+      float revert_moveAlphaFactor = 1. + moveAlphaFactor;
+      alpha = 1. - smoothstep(revert_moveAlphaFactor - 0.1, revert_moveAlphaFactor, uvComponent / (uvMax + 0.1));
+    }
+    return alpha;
+  }
+
+  vec4 frag () {
+    vec4 o = mainColor;
+    o.rgb *= colorScaleAndCutoff.xyz;
+
+    #if USE_VERTEX_COLOR
+      o.rgb *= SRGBToLinear(v_color.rgb);//use linear
+      o.a *= v_color.a;
+    #endif
+
+    vec2 moddedUV = v_uv;
+    #if CLAMP_TEXTURE_TILE
+      if (v_tilingOffset.x > 1.) {
+        moddedUV.x = mod(v_uv.x, v_tilingOffset.x);
+      }
+      if (v_tilingOffset.y > 1.) {
+        moddedUV.y = mod(v_uv.y, v_tilingOffset.y);
+      }
+    #endif
+
+    vec2 mainTexUv = moddedUV;//fract(v_uv * moveFactor.xy);
+
+    if (lightMoveSpeedControl == 0.) {
+      mainTexUv.x = fract(mainTexUv.x + cc_time.x * moveFactor.z);
+      mainTexUv.y = fract(mainTexUv.y + cc_time.x * moveFactor.w);
+    }
+
+    #if USE_TEXTURE
+      vec4 texColor = texture(mainTexture, mainTexUv);
+      // texColor.rgb = SRGBToLinear(texColor.rgb);
+      o *= texColor;
+    #endif
+      
+    // float factor1 = 1.0 - smoothstep(0.7,1.0,v_uv.y);
+    // o.a *= factor1;
+
+    #if USE_COLOR_BLEND_MAP
+      vec2 colorBlendMapUV = moddedUV;
+      if (!bool(colorBlendMapUseUVOffset)) {
+        colorBlendMapUV = v_originUV;
+      }
+
+      vec4 texColor2 = texture(colorBlendMap, colorBlendMapUV);
+      o.rgb = mix(o.rgb, colorBlend.rgb * colorBlendIntensity, texColor2.a);
+    #endif
+
+    #if USE_COLOR_ALPHA_MAP
+      vec2 colorAlphaMapUV = moddedUV;
+      if(!bool(colorAlphaMapUseUVOffset)){
+        colorAlphaMapUV = v_originUV; 
+      }
+      vec4 alphaColor = texture(colorAlphaMap, colorAlphaMapUV);
+      o.a *= alphaColor.r;
+    #endif
+
+
+    #if USE_MOVE_ALPHA
+      o.a *= remapMoveAlphaFactor(moveAlphaFactorX, v_uv.x, v_tilingOffset.x);
+      o.a *= remapMoveAlphaFactor(moveAlphaFactorY, v_uv.y, v_tilingOffset.y);
+    #endif
+
+    #if USE_ALPHA_TEST
+      if (o.ALPHA_TEST_CHANNEL < colorScaleAndCutoff.w) discard;
+    #endif
+
+    // o *= lightFactor;
+    o.a *= opacity;
+
+    #if CLAMP_TEXTURE_TILE
+      if (v_tilingOffset.x > 1.) {
+        o.a *= (1. - step(1., moddedUV.x)) * step(0., moddedUV.x);
+      }
+
+      if (v_tilingOffset.y > 1.) {
+        o.a *= (1. - step(1., moddedUV.y)) * step(0., moddedUV.y);
+      }
+    #endif
+
+    // return vec4(v_uv.x, 0., 0., 1.);
+
+    // CC_APPLY_FOG(o);
+    // return CCFragOutput(o);
+
+    return o;
+  }
+}%
