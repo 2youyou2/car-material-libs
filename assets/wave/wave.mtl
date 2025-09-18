@@ -5,7 +5,7 @@
   "__editorExtras__": {},
   "_native": "",
   "_effectAsset": {
-    "__uuid__": "3774224f-5dba-426d-ba7a-e931bd5cd49f",
+    "__uuid__": "7a74fa7d-f59e-4cd8-992d-3ed4f7c90d89",
     "__expectedType__": "cc.EffectAsset"
   },
   "_techIdx": 1,
@@ -25,14 +25,27 @@
   ],
   "_props": [
     {
-      "lineWidth": 0.2,
+      "mainTexture": {
+        "__uuid__": "07f078df-2cba-4bd1-9399-9e66c3cc3afb@6c48a",
+        "__expectedType__": "cc.Texture2D"
+      },
+      "mainColor": {
+        "__type__": "cc.Color",
+        "r": 162,
+        "g": 173,
+        "b": 209,
+        "a": 255
+      },
       "tilingOffset": {
         "__type__": "cc.Vec4",
-        "x": 1,
-        "y": 0,
+        "x": 100,
+        "y": 100,
         "z": 0,
         "w": 0
-      }
+      },
+      "cycles": 2.2,
+      "alphaDist": 12,
+      "alphaDistPower": 0.5
     }
   ]
 }

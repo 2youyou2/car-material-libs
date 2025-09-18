@@ -26,6 +26,7 @@
   "_props": [
     {
       "lineWidth": 0.2,
+      "xLine": 2,
       "tilingOffset": {
         "__type__": "cc.Vec4",
         "x": 1,
