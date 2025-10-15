@@ -1,0 +1,142 @@
+// Effect Syntax Guide: https://docs.cocos.com/creator/manual/zh/shader/index.html
+
+CCEffect %{
+  techniques:
+  - name: opaque
+    passes:
+    - vert: unlit-vs:vert # builtin header
+      frag: unlit-fs:frag
+      properties: &props
+        layer1Tex: { value: black }
+        layer2Tex: { value: black }
+        
+        tilingOffset:   { value: [1,1,0,0] }
+        uvScale:        { value: 1 }
+        fadeSpeed:      { value: 1 }
+        
+
+        maskTex:    { value: white }
+        maskTilingOffset:   { value: [1,1,0,0] }
+  - name: transparent
+    passes:
+    - vert: unlit-vs:vert # builtin header
+      frag: unlit-fs:frag
+      blendState:
+        targets:
+        - blend: true
+          blendSrc: src_alpha
+          blendDst: one_minus_src_alpha
+          blendSrcAlpha: src_alpha
+          blendDstAlpha: one_minus_src_alpha
+      properties: *props
+}%
+
+CCProgram shared-ubo %{
+  uniform SharedUBO {
+    vec4 tilingOffset;
+    vec4 maskTilingOffset;
+
+    float uvScale;
+    float fadeSpeed;
+  };
+
+  
+  uniform sampler2D maskTex;
+  uniform sampler2D layer1Tex;
+  uniform sampler2D layer2Tex;
+}%
+
+
+
+CCProgram unlit-vs %{
+  
+precision highp float;
+#include <legacy/input-standard>
+#include <builtin/uniforms/cc-global>
+#include <legacy/local-batch>
+#include <legacy/input-standard>
+#include <legacy/fog-vs>
+#include <legacy/shadow-map-vs>
+
+  #include <shared-ubo>
+
+  in vec4 a_color;
+  #if HAS_SECOND_UV
+    in vec2 a_texCoord1;
+  #endif
+
+  out vec3 v_position;
+  out vec2 v_uv;
+  out vec2 v_uv1;
+  out vec4 v_color;
+
+
+
+  vec4 vert () {
+    StandardVertInput In;
+    CCVertInput(In);
+
+    mat4 matWorld, matWorldIT;
+    CCGetWorldMatrixFull(matWorld, matWorldIT);
+
+    vec4 pos = matWorld * In.position;
+
+    v_position = pos.xyz;
+
+
+    v_uv = a_texCoord ;
+    #if HAS_SECOND_UV
+      v_uv1 = a_texCoord1;
+    #endif
+    v_color = a_color;
+
+
+    // CC_TRANSFER_FOG(pos);
+    // CC_TRANSFER_SHADOW(pos);
+
+    return cc_matProj * (cc_matView * matWorld) * In.position;
+  }
+
+}%
+
+CCProgram unlit-fs %{
+  precision highp float;
+  #include <legacy/output>
+  #include <legacy/fog-fs>
+
+  #include <shared-ubo>
+
+  in vec2 v_uv;
+  in vec3 v_position;
+
+
+    #define PI 3.141592653589793
+
+  highp float rand( const in vec2 uv ) {
+
+    const highp float a = 12.9898, b = 78.233, c = 43758.5453;
+    highp float dt = dot( uv.xy, vec2( a,b ) ), sn = mod( dt, PI );
+
+    return fract( sin( sn ) * c );
+
+  }
+
+
+  vec4 frag () {
+    float finalUvScale = uvScale / texture(maskTex, v_uv * maskTilingOffset.xy + maskTilingOffset.zw).a;
+
+    vec2 uv = mod(v_uv * tilingOffset.xy, vec2(1.)) * finalUvScale - (finalUvScale - 1.) * 0.5;
+    
+    float randomOffset = rand(floor(v_uv * tilingOffset.xy));
+
+    vec4 col1 = texture(layer1Tex, uv);
+    vec4 col2 = texture(layer2Tex, uv);
+
+    float trans = (sin(randomOffset + cc_time.x * randomOffset * fadeSpeed) + 1.) / 2.;
+
+    vec4 col = mix(col1, col2, trans);
+    
+    return col;
+
+  }
+}%

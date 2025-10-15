@@ -109,22 +109,19 @@ CCProgram unlit-fs %{
 
   float gridLine(vec2 uv) {
     float uMajorLineWidth = lineWidth;
-    float majorGridSize = 1.;
 
     vec4 uvDDXY = vec4(dFdx(uv.xy), dFdy(uv.xy));
     vec2 uvDeriv = vec2(length(uvDDXY.xz), length(uvDDXY.yw));
-    
 
-    float majorDiv = max(0.1, majorGridSize);
-    vec2 majorUVDeriv = uvDeriv / majorDiv;
-    float majorLineWidth = uMajorLineWidth / majorDiv;
-    vec2 majorDrawWidth = clamp(vec2(majorLineWidth), majorUVDeriv, vec2(0.5));
-    vec2 majorLineAA = majorUVDeriv * 1.5;
-    vec2 majorGridUV = 1.0 - abs(fract(uv.xy / majorDiv) * 2.0 - 1.0);
+    vec2 majorDrawWidth = clamp(vec2(uMajorLineWidth), uvDeriv, vec2(0.5));
+    // majorDrawWidth = max(vec2(uMajorLineWidth), uvDeriv);
+    // majorDrawWidth = vec2(uMajorLineWidth);
+    vec2 majorLineAA = uvDeriv * 1.5;
+    vec2 majorGridUV = 1.0 - abs(fract(uv.xy) * 2.0 - 1.0);
     vec2 majorGrid2 = smoothstep(majorDrawWidth + majorLineAA, majorDrawWidth - majorLineAA, majorGridUV);
-    majorGrid2 *= saturate(majorLineWidth / majorDrawWidth);
+    majorGrid2 *= saturate(uMajorLineWidth / majorDrawWidth);
     // majorGrid2 = saturate(majorGrid2 - axisLines2); // hack
-    majorGrid2 = mix(majorGrid2, vec2(majorLineWidth), saturate(majorUVDeriv * 2.0 - 1.0));
+    majorGrid2 = mix(majorGrid2, vec2(uMajorLineWidth), saturate(uvDeriv * 2.0 - 1.0));
 
     float majorGrid = mix(majorGrid2.x, 1.0, majorGrid2.y);
 
@@ -133,7 +130,6 @@ CCProgram unlit-fs %{
   
 
   vec4 frag () {
-    
     float division = 1. ;//uMajorGridFactor;
 
     // trick to reduce visual artifacts when far from the world origin
@@ -141,6 +137,11 @@ CCProgram unlit-fs %{
 
 
     // return vec4(cameraCenteringOffset, 1.);
+
+    // vec4 uvDDXY = vec4(dFdx(v_uv.xy), dFdy(v_uv.xy));
+    // vec2 uvDeriv = vec2(length(uvDDXY.xz), length(uvDDXY.yw));
+
+    // return vec4(uvDeriv, 0., 1.);
 
     vec2 uv = v_position.xz - v_cameraCenteringOffset.xz;
     vec2 pos = v_position.xz;
@@ -152,10 +153,7 @@ CCProgram unlit-fs %{
 
     return vec4(col.rgb, col.a * line);
 
-    // vec4 uvDDXY = vec4(dFdx(uv.xy), dFdy(uv.xy));
-    // vec2 uvDeriv = vec2(length(uvDDXY.xz), length(uvDDXY.yw));
 
-    // return vec4(uvDeriv, 0., 1.);
 
 
     // float axisLineWidth = 0.1;
