@@ -87,6 +87,21 @@ export class mesh_particle extends Component {
         this.init()
     }
 
+    @property
+    _edgeSlicedDist = 0.1
+    @property({
+        visible() {
+            return this.edgeType !== EdgeType.None
+        },
+    })
+    get edgeSlicedDist() {
+        return this._edgeSlicedDist
+    }
+    set edgeSlicedDist(v) {
+        this._edgeSlicedDist = v
+        this.init()
+    }
+
     @property({
         visible() {
             return this.edgeType !== EdgeType.None
@@ -112,29 +127,39 @@ export class mesh_particle extends Component {
 
         let datas = []
 
-        for (let i = 0; i < meshData.verticesCount; i++) {
-            let ele = meshData.vertices[i * 3 + slicedPosEleIdx];
 
-            let eleIndex = Math.floor((ele - minEle) / step)
-            if (!datas[eleIndex]) {
-                datas[eleIndex] = {
-                    vertices: [],
-                    verticesCount: 0,
-                    normals: [],
+        for (let sliceIdx = 0; sliceIdx < this.edgeSlicedCount; sliceIdx++) {
+            let sliceEle = minEle + step * sliceIdx;
+
+            for (let i = 0; i < meshData.verticesCount; i++) {
+                let ele = meshData.vertices[i * 3 + slicedPosEleIdx];
+
+                if (Math.abs(sliceEle - ele) > this.edgeSlicedDist) {
+                    continue;
                 }
+
+                // let eleIndex = Math.floor((ele - minEle) / step)
+                if (!datas[sliceIdx]) {
+                    datas[sliceIdx] = {
+                        vertices: [],
+                        verticesCount: 0,
+                        normals: [],
+                    }
+                }
+
+                let subData = datas[sliceIdx]
+
+                subData.verticesCount++;
+                subData.vertices.push(meshData.vertices[i * 3 + 0])
+                subData.vertices.push(meshData.vertices[i * 3 + 1])
+                subData.vertices.push(meshData.vertices[i * 3 + 2])
+
+                subData.normals.push(meshData.normals[i * 3 + 0])
+                subData.normals.push(meshData.normals[i * 3 + 1])
+                subData.normals.push(meshData.normals[i * 3 + 2])
             }
-
-            let subData = datas[eleIndex]
-
-            subData.verticesCount++;
-            subData.vertices.push(meshData.vertices[i * 3 + 0])
-            subData.vertices.push(meshData.vertices[i * 3 + 1])
-            subData.vertices.push(meshData.vertices[i * 3 + 2])
-
-            subData.normals.push(meshData.normals[i * 3 + 0])
-            subData.normals.push(meshData.normals[i * 3 + 1])
-            subData.normals.push(meshData.normals[i * 3 + 2])
         }
+
 
         return datas
     }
@@ -210,7 +235,7 @@ export class mesh_particle extends Component {
                     slicedData = slicedMeshDatas[dataIdx];
                 }
                 if (!slicedData) {
-                    debugger
+                    // debugger
                     return
                 }
                 emitFromMeshData(p, slicedData)
